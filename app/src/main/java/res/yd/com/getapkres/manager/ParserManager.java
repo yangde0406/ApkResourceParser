@@ -4,11 +4,13 @@ import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.text.TextUtils;
 
 import java.lang.reflect.Field;
 import java.util.List;
 
 import dalvik.system.PathClassLoader;
+import res.yd.com.getapkres.R;
 
 /**
  * Created by yangde on 15/5/21.
@@ -20,32 +22,9 @@ public class ParserManager {
      * 解析的种类
      */
     public enum ResourceType {
-        LAYOUT(1, "layout", "布局文件"),
-        STRINGS(2, "strings", "字符串"),//
-        ANIM(3, "anim", "动画文件");
-
-
-        private int code;
-        private String value;
-        private String description;
-
-        ResourceType(int code, String value, String description) {
-            this.code = code;
-            this.value = value;
-            this.description = description;
-        }
-
-        public int getCode() {
-            return code;
-        }
-
-        public String getValue() {
-            return value;
-        }
-
-        public String getDescription() {
-            return description;
-        }
+        LAYOUT,
+        STRINGS,//
+        ANIM
     }
 
     private Context context;
@@ -65,7 +44,7 @@ public class ParserManager {
         Context runningApkContext = getRunningApkContext(packageName);
         PathClassLoader classLoader = new PathClassLoader(runningApkContext.getPackageResourcePath(), context.getClassLoader());
         try {
-            Class<?> forClass = Class.forName(packageName + ".R$" + ResourceType.LAYOUT.getValue(), true, classLoader);
+            Class<?> forClass = Class.forName(packageName + ".R$layout", true, classLoader);
             Field[] declaredFields = forClass.getDeclaredFields();
 
 
@@ -79,20 +58,48 @@ public class ParserManager {
         }
     }
 
+    public String parserStringsFile(String packageName) {
+        Context runningApkContext = getRunningApkContext(packageName);
+        PathClassLoader classLoader = new PathClassLoader(runningApkContext.getPackageResourcePath(), context.getClassLoader());
+        try {
+            Class<?> forClass = Class.forName(packageName + ".R$string", true, classLoader);
+            Field[] declaredFields = forClass.getDeclaredFields();
+
+            StringBuffer sb = new StringBuffer();
+            sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+            sb.append("<resources>\n");
+            try {
+                for (Field field : declaredFields) {
+                    String name = field.getName();
+                    int resId = field.getInt(R.string.class);
+                    String value = runningApkContext.getString(resId);
+
+                    // <string name="app_name">GetApkRes</string>
+                    sb.append("\t<string name=\"" + name + "\">" + value + "</string>\n");
+                }
+                sb.append("</resources>");
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+            return sb.toString();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     private Context getRunningApkContext(String packageName) {
-        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
-        List<ActivityManager.RunningTaskInfo> runningTask = activityManager.getRunningTasks(5);
-        String runApkPackageName;
-        for (ActivityManager.RunningTaskInfo runningTaskInfo : runningTask) {
-            ComponentName componentName = runningTaskInfo.topActivity;
-            runApkPackageName = componentName.getPackageName();
-            if (runApkPackageName.equals(packageName)) {
-                break;
+        if (TextUtils.isEmpty(packageName)) {
+            ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+            List<ActivityManager.RunningTaskInfo> runningTask = activityManager.getRunningTasks(5);
+            for (ActivityManager.RunningTaskInfo runningTaskInfo : runningTask) {
+                ComponentName componentName = runningTaskInfo.topActivity;
+                packageName = componentName.getPackageName();
             }
         }
 
         try {
-            Context runningApkContext = context.createPackageContext(packageName, Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY);
+            Context runningApkContext = context.createPackageContext(packageName, Context.CONTEXT_IGNORE_SECURITY);
             return runningApkContext;
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();

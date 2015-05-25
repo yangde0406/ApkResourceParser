@@ -8,10 +8,25 @@
                 android:paddingTop="@dimen/activity_vertical_margin"
                 tools:context=".MyActivity">
 
+    <EditText
+        android:id="@+id/main_parser_packagename_editview"
+        android:layout_width="match_parent"
+        android:layout_height="45dp"
+        android:hint="com.test.paser"
+        android:singleLine="true"/>
+
     <Button
         android:id="@+id/main_parserlayout_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_below="@+id/main_parser_packagename_editview"
         android:text="获取布局文件"/>
+
+    <Button
+        android:id="@+id/main_parserstring_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/main_parserlayout_button"
+        android:text="获取字符串文件"/>
 
 </RelativeLayout>
